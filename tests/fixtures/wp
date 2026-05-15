@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+printf 'wp'
+for arg in "$@"; do printf ' [%s]' "$arg"; done
+printf '\n'
+exit 0

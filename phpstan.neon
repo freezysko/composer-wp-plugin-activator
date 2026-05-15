@@ -1,0 +1,8 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    # phpVersion is intentionally omitted: PHPStan infers the analysis range
+    # from composer.json's "php" constraint (^8.1), so it checks the code
+    # against the whole supported range, not a single version.

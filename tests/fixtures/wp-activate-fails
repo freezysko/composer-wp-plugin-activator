@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Succeeds for `--version` and `core is-installed`, fails for `plugin activate`.
+# Used by PluginRunnerTest to drive the fail-on-error path through the full
+# Composer → Config → WpCli → Activator → PluginRunner chain.
+for arg in "$@"; do
+    if [ "$arg" = "activate" ]; then
+        printf "Error: Plugin 'hello' could not be activated.\n" >&2
+        exit 1
+    fi
+done
+exit 0

@@ -1,0 +1,24 @@
+name: release
+
+# Pings Packagist to update the package as soon as a version tag is pushed.
+# Packagist's GitHub webhook normally handles this, but this workflow makes
+# tag-triggered updates explicit and immediate.
+#
+# Requires two repository secrets:
+#   PACKAGIST_USERNAME - your Packagist username
+#   PACKAGIST_TOKEN    - your Packagist API token (Profile -> Show API Token)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  notify-packagist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Packagist
+        run: |
+          curl -sf -XPOST -H'content-type:application/json' \
+            "https://packagist.org/api/update-package?username=${{ secrets.PACKAGIST_USERNAME }}&apiToken=${{ secrets.PACKAGIST_TOKEN }}" \
+            -d'{"repository":{"url":"https://packagist.org/packages/freezysko/composer-wp-plugin-activator"}}'
