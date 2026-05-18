@@ -1,5 +1,13 @@
 # Composer WP Plugin Activator
 
+[![CI](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/ci.yml/badge.svg)](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/codeql.yml/badge.svg)](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/codeql.yml)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-brightgreen.svg)](phpstan.neon)
+[![Latest Version](https://img.shields.io/packagist/v/freezysko/composer-wp-plugin-activator.svg)](https://packagist.org/packages/freezysko/composer-wp-plugin-activator)
+[![Total Downloads](https://img.shields.io/packagist/dt/freezysko/composer-wp-plugin-activator.svg)](https://packagist.org/packages/freezysko/composer-wp-plugin-activator)
+[![License](https://img.shields.io/packagist/l/freezysko/composer-wp-plugin-activator.svg)](LICENSE)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://www.conventionalcommits.org)
+
 Auto-activate Composer-installed WordPress plugins after `composer install` /
 `composer update`. WordPress plugins pulled in via Composer (Bedrock-style:
 `wpackagist-plugin/*`, `wp-plugin/*`) land on disk but stay inactive until
