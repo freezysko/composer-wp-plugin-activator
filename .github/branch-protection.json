@@ -1,0 +1,38 @@
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": [
+      "test (8.1, 2.2, highest)",
+      "test (8.1, 2.2, lowest)",
+      "test (8.1, latest, highest)",
+      "test (8.1, latest, lowest)",
+      "test (8.2, 2.2, highest)",
+      "test (8.2, 2.2, lowest)",
+      "test (8.2, latest, highest)",
+      "test (8.2, latest, lowest)",
+      "test (8.3, 2.2, highest)",
+      "test (8.3, 2.2, lowest)",
+      "test (8.3, latest, highest)",
+      "test (8.3, latest, lowest)",
+      "test (8.4, 2.2, highest)",
+      "test (8.4, 2.2, lowest)",
+      "test (8.4, latest, highest)",
+      "test (8.4, latest, lowest)",
+      "test (8.5, 2.2, highest)",
+      "test (8.5, 2.2, lowest)",
+      "test (8.5, latest, highest)",
+      "test (8.5, latest, lowest)",
+      "Analyze (actions)",
+      "Lint Commit Messages",
+      "dependency-review"
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_conversation_resolution": true,
+  "required_signatures": true
+}
