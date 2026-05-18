@@ -6,3 +6,13 @@ parameters:
     # phpVersion is intentionally omitted: PHPStan infers the analysis range
     # from composer.json's "php" constraint (^8.1), so it checks the code
     # against the whole supported range, not a single version.
+    #
+    # treatPhpDocTypesAsCertain is set to false because this package bridges
+    # multiple Composer 2.x versions whose PHPDoc has tightened over time
+    # (e.g. InstallationManager::getInstallPath went from ?string to string
+    # in Composer 2.5). Defensive null/empty checks against PHPDoc-typed
+    # values must remain meaningful so the code keeps working against the
+    # ^2.2 floor declared in composer.json — PHPStan 2.0.x flags such checks
+    # as always-false under the default treatPhpDocTypesAsCertain: true,
+    # which would make --prefer-lowest CI fail spuriously.
+    treatPhpDocTypesAsCertain: false
