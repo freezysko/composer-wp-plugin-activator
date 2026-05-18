@@ -1,0 +1,80 @@
+name: Bug report
+description: Report a bug in composer-wp-plugin-activator
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please complete the form below.
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "e.g. 8.3.6"
+    validations:
+      required: true
+
+  - type: input
+    id: composer-version
+    attributes:
+      label: Composer version
+      placeholder: "e.g. 2.7.7"
+    validations:
+      required: true
+
+  - type: input
+    id: wp-cli-version
+    attributes:
+      label: WP-CLI version
+      placeholder: "e.g. 2.10.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+      placeholder: "e.g. Ubuntu 24.04, macOS 14.5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: composer-extra
+    attributes:
+      label: Relevant composer.json `extra` block
+      description: The `extra.composer-wp-plugin-activator` section of your composer.json.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered list of steps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: composer-output
+    attributes:
+      label: Relevant Composer output
+      description: The lines around the failure, including any warning/error from composer-wp-plugin-activator.
+      render: text
+    validations:
+      required: false
