@@ -1,5 +1,8 @@
 name: release
 
+permissions:
+  contents: read
+
 # Pings Packagist to update the package as soon as a version tag is pushed.
 # Packagist's GitHub webhook normally handles this, but this workflow makes
 # tag-triggered updates explicit and immediate.
