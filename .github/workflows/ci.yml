@@ -29,14 +29,14 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # was v2.37.1 — current as of 2026-05-19
         with:
           php-version: ${{ matrix.php }}
           tools: ${{ matrix.composer == 'latest' && 'composer' || format('composer:v{0}', matrix.composer) }}
           coverage: none
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v4
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # was 4.0.0 — current as of 2026-05-19
         with:
           dependency-versions: ${{ matrix.dependency-versions }}
 
