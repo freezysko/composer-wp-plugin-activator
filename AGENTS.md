@@ -65,7 +65,7 @@ When dispatched to implement a task from the implementation plan, subagents foll
 Each subtask is sized ~2 hours of focused work with a single, verifiable acceptance criterion.
 
 1. **Pick.** Subagent picks the next unchecked `[ ]` subtask in the active plan, in order, that has no unresolved blocker.
-2. **Implement.** Subagent works on a local branch named `feat/<n>-<slug>` / `fix/<n>-<slug>` / `chore/<n>-<slug>` / `docs/<n>-<slug>` where `<n>` is the subtask identifier. Commits are conventional and signed.
+2. **Implement.** Subagent works on a local branch named `feat/<n>-<slug>` / `fix/<n>-<slug>` / `chore/<n>-<slug>` / `docs/<n>-<slug>` where `<n>` is the subtask identifier. Commits are conventional, signed, and end with the trailer `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` (use `git commit ... --trailer 'Co-Authored-By: …'` or include it in the commit-message body so authorship of AI-driven work is recorded).
 3. **Self-verify.** Subagent runs `composer ci` (and any task-specific extra checks) locally. All must be green.
 4. **Review chain (hybrid granularity):**
    - **Per-subtask:** Codex review via the `codex:codex-rescue` subagent. Receives the diff (`git diff main..<branch>`), the relevant task context, and `AGENTS.md`. Returns review text.
