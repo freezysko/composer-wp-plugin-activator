@@ -30,6 +30,8 @@
   "require-dev": {
     "composer/composer": "^2.0",
     "friendsofphp/php-cs-fixer": "^3.0",
+    "icanhazstring/composer-unused": "^0.8",
+    "maglnet/composer-require-checker": "^4.0",
     "phpstan/extension-installer": "^1.4",
     "phpstan/phpstan": "^2.0",
     "phpstan/phpstan-deprecation-rules": "^2.0",
