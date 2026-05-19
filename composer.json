@@ -30,9 +30,14 @@
   "require-dev": {
     "composer/composer": "^2.0",
     "friendsofphp/php-cs-fixer": "^3.0",
+    "phpstan/extension-installer": "^1.4",
     "phpstan/phpstan": "^2.0",
+    "phpstan/phpstan-deprecation-rules": "^2.0",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpstan/phpstan-strict-rules": "^2.0",
     "phpunit/phpunit": "^10.1",
-    "roave/security-advisories": "dev-latest"
+    "roave/security-advisories": "dev-latest",
+    "tomasvotruba/cognitive-complexity": "^1.0"
   },
   "minimum-stability": "stable",
   "autoload": {
@@ -47,7 +52,8 @@
   },
   "config": {
     "allow-plugins": {
-      "freezysko/composer-wp-plugin-activator": true
+      "freezysko/composer-wp-plugin-activator": true,
+      "phpstan/extension-installer": true
     },
     "platform": {
       "php": "8.1.0"
@@ -59,7 +65,7 @@
   },
   "scripts": {
     "test": "phpunit",
-    "phpstan": "phpstan analyse --no-progress",
+    "phpstan": "phpstan analyse --no-progress --memory-limit=1G",
     "ci": [
       "@test",
       "@phpstan"

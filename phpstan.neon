@@ -16,3 +16,15 @@ parameters:
     # as always-false under the default treatPhpDocTypesAsCertain: true,
     # which would make --prefer-lowest CI fail spuriously.
     treatPhpDocTypesAsCertain: false
+
+    # Cognitive complexity (tomasvotruba/cognitive-complexity, per A-d4).
+    # Only the per-function threshold is enforced (15); class-level and
+    # dependency-tree thresholds are intentionally raised to effectively
+    # disable them — spec § 5.2 leaves class-level tracked-but-not-enforced.
+    # The four phpstan/* extensions (strict-rules, deprecation-rules,
+    # phpunit, and tomasvotruba/cognitive-complexity itself) are auto-loaded
+    # by phpstan/extension-installer; no manual `includes:` needed.
+    cognitive_complexity:
+        function: 15
+        class: 999
+        dependency_tree: 999
