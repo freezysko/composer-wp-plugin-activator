@@ -24,7 +24,8 @@
       "test (8.5, latest, lowest)",
       "Analyze (actions)",
       "Lint Commit Messages",
-      "dependency-review"
+      "dependency-review",
+      "semgrep"
     ]
   },
   "enforce_admins": false,
