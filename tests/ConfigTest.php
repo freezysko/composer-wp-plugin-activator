@@ -78,31 +78,60 @@ final class ConfigTest extends TestCase
     }
 
     /**
-     * @dataProvider allowRootProvider
+     * @dataProvider allowRootAcceptedLiteralProvider
      */
-    public function testAllowRootNormalization(mixed $input, string $expected): void
+    public function testAllowRootAcceptsLiteral(mixed $input, string $expected): void
     {
         self::assertSame($expected, $this->fromRaw(['allow-root' => $input])->getAllowRootMode());
     }
 
     /**
+     * Per C-d12: only the JSON-native booleans `true`/`false` and the string
+     * `"auto"` are accepted. Stringy aliases ("yes", "always", "1", "TRUE"…)
+     * are rejected with a warning so a shell-metacharacter payload cannot
+     * ride in on a permissive string branch.
+     *
      * @return array<string, array{mixed, string}>
      */
-    public static function allowRootProvider(): array
+    public static function allowRootAcceptedLiteralProvider(): array
     {
         return [
             'bool true' => [true, Config::ALLOW_ROOT_ALWAYS],
             'bool false' => [false, Config::ALLOW_ROOT_NEVER],
             'string auto' => ['auto', Config::ALLOW_ROOT_AUTO],
-            'string true' => ['true', Config::ALLOW_ROOT_ALWAYS],
-            'string false' => ['false', Config::ALLOW_ROOT_NEVER],
-            'string always' => ['always', Config::ALLOW_ROOT_ALWAYS],
-            'string never' => ['never', Config::ALLOW_ROOT_NEVER],
-            'string yes' => ['yes', Config::ALLOW_ROOT_ALWAYS],
-            'string no' => ['no', Config::ALLOW_ROOT_NEVER],
-            'string 1' => ['1', Config::ALLOW_ROOT_ALWAYS],
-            'string 0' => ['0', Config::ALLOW_ROOT_NEVER],
-            'mixed case' => ['  TRUE  ', Config::ALLOW_ROOT_ALWAYS],
+        ];
+    }
+
+    /**
+     * @dataProvider allowRootRejectedProvider
+     */
+    public function testAllowRootRejectsNonLiteralWithWarning(mixed $input): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('allow-root'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['allow-root' => $input]], $io);
+
+        self::assertSame(Config::ALLOW_ROOT_AUTO, $config->getAllowRootMode());
+    }
+
+    /**
+     * @return array<string, array{mixed}>
+     */
+    public static function allowRootRejectedProvider(): array
+    {
+        return [
+            'string true' => ['true'],
+            'string false' => ['false'],
+            'string always' => ['always'],
+            'string never' => ['never'],
+            'string yes' => ['yes'],
+            'string no' => ['no'],
+            'string 1' => ['1'],
+            'string 0' => ['0'],
+            'mixed case TRUE' => ['  TRUE  '],
         ];
     }
 
@@ -403,5 +432,175 @@ final class ConfigTest extends TestCase
         );
 
         self::assertSame(['woocommerce'], $config->getPlugins());
+    }
+
+    // ---------------------------------------------------------------------
+    // Injection-payload tests (C-6 / C-d19 / spec § 5.7)
+    //
+    // Every consumer-supplied key that lands on the WP-CLI argv must reject
+    // shell metacharacters at parse time. The shared provider below pins the
+    // behaviour so a regex change cannot silently regress.
+    // ---------------------------------------------------------------------
+
+    /**
+     * Representative shell-metacharacter payloads. Each must be rejected by
+     * every key-level validator that feeds the WP-CLI argv.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function shellMetaPayloadsProvider(): array
+    {
+        return [
+            'semicolon' => ['; ls'],
+            'backtick' => ['`id`'],
+            'command-sub' => ['$(whoami)'],
+            'pipe-or' => ['|| true'],
+            'pipe-and' => ['&& whoami'],
+            'newline' => ["wp\nls"],
+            'null-byte' => ["wp\0ls"],
+            'destructive' => ['wp; rm -rf /'],
+        ];
+    }
+
+    /**
+     * @dataProvider shellMetaPayloadsProvider
+     */
+    public function testWpCliRejectsShellMetacharacters(string $payload): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('wp-cli'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['wp-cli' => $payload]], $io);
+
+        self::assertSame('wp', $config->getWpCli());
+    }
+
+    /**
+     * @dataProvider shellMetaPayloadsProvider
+     */
+    public function testWpPathRejectsShellMetacharacters(string $payload): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('wp-path'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['wp-path' => $payload]], $io);
+
+        self::assertNull($config->getWpPath());
+    }
+
+    public function testWpPathRejectsLeadingDashOptionSpoofing(): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('wp-path'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['wp-path' => '-version']], $io);
+
+        self::assertNull($config->getWpPath());
+    }
+
+    /**
+     * @dataProvider shellMetaPayloadsProvider
+     */
+    public function testAllowRootRejectsShellMetacharacters(string $payload): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('allow-root'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['allow-root' => $payload]], $io);
+
+        self::assertSame(Config::ALLOW_ROOT_AUTO, $config->getAllowRootMode());
+    }
+
+    /**
+     * @dataProvider shellMetaPayloadsProvider
+     */
+    public function testPluginsEntryRejectsShellMetacharacters(string $payload): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())->method('writeError');
+
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['plugins' => [$payload]]],
+            $io
+        );
+
+        self::assertSame([], $config->getPlugins());
+    }
+
+    /**
+     * @dataProvider shellMetaPayloadsProvider
+     */
+    public function testPriorityEntryRejectsShellMetacharacters(string $payload): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())->method('writeError');
+
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['priority' => [$payload]]],
+            $io
+        );
+
+        self::assertSame([], $config->getPriority());
+    }
+
+    public function testVerboseAcceptsTrueBool(): void
+    {
+        // Positive control: a valid bool flips the value from default (false)
+        // to true. Without this, "rejection" tests below could pass merely
+        // because the default also happens to be false.
+        $config = $this->fromRaw(['verbose' => true]);
+
+        self::assertTrue($config->isVerbose());
+    }
+
+    public function testVerboseRejectsStringTrue(): void
+    {
+        // String "true" is rejected by strict is_bool → falls back to
+        // default (false) AND emits a warning. Asserting both makes this
+        // distinct from the "default happens to be false" trivial case.
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('verbose'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['verbose' => 'true']], $io);
+
+        self::assertFalse($config->isVerbose());
+    }
+
+    public function testFailOnErrorRejectsStringTrue(): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('fail-on-error'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['fail-on-error' => 'true']], $io);
+
+        self::assertFalse($config->shouldFailOnError());
+    }
+
+    public function testSkipWhenWpNotInstalledRejectsStringFalse(): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('skip-when-wp-not-installed'));
+
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['skip-when-wp-not-installed' => 'false']],
+            $io
+        );
+
+        // Default is true; string "false" is rejected → stays true.
+        self::assertTrue($config->shouldSkipWhenNotInstalled());
     }
 }

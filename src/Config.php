@@ -14,6 +14,13 @@ final class Config
     public const ALLOW_ROOT_ALWAYS = 'always';
     public const ALLOW_ROOT_NEVER = 'never';
 
+    /**
+     * Allowlist of characters permitted in `wp-cli` and `wp-path` values.
+     * Rejects every shell metacharacter (`;`, `` ` ``, `$`, `|`, `&`, `(`, `)`,
+     * `<`, `>`, whitespace, newline, null byte, etc.). Applied after trim.
+     */
+    private const VALID_PATH_REGEX = '/^[A-Za-z0-9_.\/\-]+$/';
+
     private string $wpCli = 'wp';
     private ?string $wpPath = null;
     /** @var 'all'|'composer'|list<string> */
@@ -124,7 +131,18 @@ final class Config
             return 'wp';
         }
 
-        return trim($value);
+        $trimmed = trim($value);
+        if (preg_match(self::VALID_PATH_REGEX, $trimmed) !== 1) {
+            self::warn($io, sprintf(
+                '"wp-cli" value %s contains disallowed characters; using default ("wp"). '
+                . 'Allowed: alphanumerics, "_", ".", "/", "-".',
+                var_export($value, true)
+            ));
+
+            return 'wp';
+        }
+
+        return $trimmed;
     }
 
     /**
@@ -147,7 +165,27 @@ final class Config
             return null;
         }
 
-        return trim($value);
+        $trimmed = trim($value);
+        if (str_starts_with($trimmed, '-')) {
+            self::warn(
+                $io,
+                '"wp-path" must not start with "-" (would be interpreted as a WP-CLI option); using default (null)'
+            );
+
+            return null;
+        }
+
+        if (preg_match(self::VALID_PATH_REGEX, $trimmed) !== 1) {
+            self::warn($io, sprintf(
+                '"wp-path" value %s contains disallowed characters; using default (null). '
+                . 'Allowed: alphanumerics, "_", ".", "/", "-".',
+                var_export($value, true)
+            ));
+
+            return null;
+        }
+
+        return $trimmed;
     }
 
     /**
@@ -277,6 +315,12 @@ final class Config
     }
 
     /**
+     * Strict literal validation per C-d12: only the JSON-native boolean
+     * literals `true` / `false` or the string `"auto"` are accepted. Stringy
+     * aliases like `"yes"` / `"always"` are rejected with a warning so a
+     * shell-metacharacter payload cannot ride in on a permissive string
+     * branch.
+     *
      * @param array<mixed> $raw
      */
     private static function parseAllowRoot(array $raw, IOInterface $io): string
@@ -287,24 +331,18 @@ final class Config
 
         $value = $raw['allow-root'];
 
-        if (is_bool($value)) {
-            return $value ? self::ALLOW_ROOT_ALWAYS : self::ALLOW_ROOT_NEVER;
+        if ($value === true) {
+            return self::ALLOW_ROOT_ALWAYS;
         }
 
-        if (is_string($value)) {
-            return match (strtolower(trim($value))) {
-                'true', 'always', '1', 'yes' => self::ALLOW_ROOT_ALWAYS,
-                'false', 'never', '0', 'no' => self::ALLOW_ROOT_NEVER,
-                'auto' => self::ALLOW_ROOT_AUTO,
-                default => self::warnAllowRoot($io),
-            };
+        if ($value === false) {
+            return self::ALLOW_ROOT_NEVER;
         }
 
-        return self::warnAllowRoot($io);
-    }
+        if ($value === 'auto') {
+            return self::ALLOW_ROOT_AUTO;
+        }
 
-    private static function warnAllowRoot(IOInterface $io): string
-    {
         self::warn($io, '"allow-root" must be true, false, or "auto", using default ("auto")');
 
         return self::ALLOW_ROOT_AUTO;
