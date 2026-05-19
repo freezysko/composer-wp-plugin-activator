@@ -9,8 +9,7 @@ final class WpCliResult
     public function __construct(
         public readonly int $exitCode,
         public readonly string $output,
-    ) {
-    }
+    ) {}
 
     public function isSuccessful(): bool
     {

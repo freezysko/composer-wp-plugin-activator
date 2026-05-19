@@ -12,8 +12,7 @@ class WpCli
     public function __construct(
         private readonly Config $config,
         private readonly ProcessExecutor $executor,
-    ) {
-    }
+    ) {}
 
     public function binaryExists(): bool
     {
@@ -51,7 +50,7 @@ class WpCli
 
         // ProcessExecutor::execute()'s by-ref $output is typed mixed in
         // Composer's stubs; narrow it back to string for PHPStan max.
-        $combined = trim((is_string($output) ? $output : '') . "\n" . $errorOutput);
+        $combined = trim((\is_string($output) ? $output : '') . "\n" . $errorOutput);
 
         return new WpCliResult($exitCode, $combined);
     }
@@ -84,7 +83,7 @@ class WpCli
         return match ($this->config->getAllowRootMode()) {
             Config::ALLOW_ROOT_ALWAYS => true,
             Config::ALLOW_ROOT_NEVER => false,
-            default => function_exists('posix_getuid') && posix_getuid() === 0,
+            default => \function_exists('posix_getuid') && posix_getuid() === 0,
         };
     }
 }

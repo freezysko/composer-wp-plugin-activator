@@ -12,6 +12,7 @@ use Composer\Repository\InstalledRepositoryInterface;
 use Composer\Repository\RepositoryManager;
 use Freezysko\ComposerWpPluginActivator\ComposerPluginResolver;
 use PHPUnit\Framework\TestCase;
+use SplObjectStorage;
 
 final class ComposerPluginResolverTest extends TestCase
 {
@@ -33,8 +34,8 @@ final class ComposerPluginResolverTest extends TestCase
     }
 
     /**
-     * @param list<PackageInterface>           $packages
-     * @param array<int, string|null>          $installPaths indexed parallel to $packages
+     * @param list<PackageInterface> $packages
+     * @param array<int, string|null> $installPaths indexed parallel to $packages
      */
     private function composer(array $packages, array $installPaths): Composer
     {
@@ -47,15 +48,15 @@ final class ComposerPluginResolverTest extends TestCase
         // Identity-keyed lookup: two createMock() packages are not reliably
         // distinguishable by willReturnMap's ==-style matching, so match on
         // object identity instead.
-        /** @var \SplObjectStorage<PackageInterface, string|null> $pathByPackage */
-        $pathByPackage = new \SplObjectStorage();
+        /** @var SplObjectStorage<PackageInterface, string|null> $pathByPackage */
+        $pathByPackage = new SplObjectStorage();
         foreach ($packages as $index => $package) {
             $pathByPackage[$package] = $installPaths[$index] ?? null;
         }
 
         $installationManager = $this->createMock(InstallationManager::class);
         $installationManager->method('getInstallPath')->willReturnCallback(
-            static fn (PackageInterface $package): ?string => $pathByPackage[$package] ?? null
+            static fn(PackageInterface $package): ?string => $pathByPackage[$package] ?? null
         );
 
         $composer = $this->createMock(Composer::class);

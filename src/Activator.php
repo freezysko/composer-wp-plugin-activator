@@ -19,8 +19,7 @@ final class Activator
         private readonly Config $config,
         private readonly WpCli $wpCli,
         private readonly IOInterface $io,
-    ) {
-    }
+    ) {}
 
     /**
      * Orchestrates activation. Returns an exit code; never throws. The
@@ -31,7 +30,7 @@ final class Activator
     public function run(callable $resolveComposerPlugins): int
     {
         if (!$this->wpCli->binaryExists()) {
-            $this->io->writeError(sprintf(
+            $this->io->writeError(\sprintf(
                 '<warning>composer-wp-plugin-activator: wp-cli not found (tried "%s"), '
                 . 'skipping plugin activation</warning>',
                 $this->config->getWpCli()
@@ -56,7 +55,7 @@ final class Activator
 
         if ($plugins === 'all') {
             return $this->runMain(
-                fn (): WpCliResult => $this->wpCli->activateAll(),
+                fn(): WpCliResult => $this->wpCli->activateAll(),
                 $priorityResult
             );
         }
@@ -71,7 +70,7 @@ final class Activator
             }
 
             return $this->runMain(
-                fn (): WpCliResult => $this->wpCli->activate($slugs),
+                fn(): WpCliResult => $this->wpCli->activate($slugs),
                 $priorityResult
             );
         }
@@ -84,7 +83,7 @@ final class Activator
         }
 
         return $this->runMain(
-            fn (): WpCliResult => $this->wpCli->activate($plugins),
+            fn(): WpCliResult => $this->wpCli->activate($plugins),
             $priorityResult
         );
     }
@@ -139,7 +138,7 @@ final class Activator
     private function reportNoMain(?WpCliResult $priorityResult, string $reason): int
     {
         if ($priorityResult === null) {
-            $this->io->write(sprintf(
+            $this->io->write(\sprintf(
                 '<info>composer-wp-plugin-activator: %s, nothing to activate</info>',
                 $reason
             ));
@@ -172,7 +171,7 @@ final class Activator
      * verbose output cover both passes.
      *
      * @param callable(): WpCliResult $activate
-     * @param list<string>            $outputs
+     * @param list<string> $outputs
      */
     private function activateWithRetry(callable $activate, int $totalActivated = 0, array $outputs = []): int
     {
@@ -203,7 +202,7 @@ final class Activator
         if ($totalActivated === 0) {
             $this->io->write('<info>composer-wp-plugin-activator: all plugins already active.</info>');
         } else {
-            $this->io->write(sprintf(
+            $this->io->write(\sprintf(
                 '<info>composer-wp-plugin-activator: activated %d plugin(s).</info>',
                 $totalActivated
             ));

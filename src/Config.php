@@ -32,9 +32,7 @@ final class Config
     private bool $failOnError = false;
     private string $allowRootMode = self::ALLOW_ROOT_AUTO;
 
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     /**
      * @param array<mixed> $extra
@@ -43,8 +41,8 @@ final class Config
     {
         $raw = $extra[self::EXTRA_KEY] ?? [];
 
-        if (!is_array($raw)) {
-            self::warn($io, sprintf('"extra.%s" must be an object', self::EXTRA_KEY));
+        if (!\is_array($raw)) {
+            self::warn($io, \sprintf('"extra.%s" must be an object', self::EXTRA_KEY));
             $raw = [];
         }
 
@@ -53,7 +51,7 @@ final class Config
         $config->wpPath = self::parseWpPath($raw, $io);
         $config->plugins = self::parsePlugins($raw, $io);
         $config->priority = self::parsePriority($raw, $io);
-        if (is_array($config->plugins) && $config->priority !== []) {
+        if (\is_array($config->plugins) && $config->priority !== []) {
             self::warn(
                 $io,
                 '"priority" is ignored when "plugins" is an explicit array '
@@ -120,12 +118,12 @@ final class Config
      */
     private static function parseWpCli(array $raw, IOInterface $io): string
     {
-        if (!array_key_exists('wp-cli', $raw)) {
+        if (!\array_key_exists('wp-cli', $raw)) {
             return 'wp';
         }
 
         $value = $raw['wp-cli'];
-        if (!is_string($value) || trim($value) === '') {
+        if (!\is_string($value) || trim($value) === '') {
             self::warn($io, '"wp-cli" must be a non-empty string, using default ("wp")');
 
             return 'wp';
@@ -142,7 +140,7 @@ final class Config
         }
 
         if (preg_match(self::VALID_PATH_REGEX, $trimmed) !== 1) {
-            self::warn($io, sprintf(
+            self::warn($io, \sprintf(
                 '"wp-cli" value %s contains disallowed characters; using default ("wp"). '
                 . 'Allowed: alphanumerics, "_", ".", "/", "-".',
                 var_export($value, true)
@@ -159,7 +157,7 @@ final class Config
      */
     private static function parseWpPath(array $raw, IOInterface $io): ?string
     {
-        if (!array_key_exists('wp-path', $raw)) {
+        if (!\array_key_exists('wp-path', $raw)) {
             return null;
         }
 
@@ -168,7 +166,7 @@ final class Config
             return null;
         }
 
-        if (!is_string($value) || trim($value) === '') {
+        if (!\is_string($value) || trim($value) === '') {
             self::warn($io, '"wp-path" must be a non-empty string or null, using default (null)');
 
             return null;
@@ -185,7 +183,7 @@ final class Config
         }
 
         if (preg_match(self::VALID_PATH_REGEX, $trimmed) !== 1) {
-            self::warn($io, sprintf(
+            self::warn($io, \sprintf(
                 '"wp-path" value %s contains disallowed characters; using default (null). '
                 . 'Allowed: alphanumerics, "_", ".", "/", "-".',
                 var_export($value, true)
@@ -204,13 +202,13 @@ final class Config
      */
     private static function parsePlugins(array $raw, IOInterface $io): string|array
     {
-        if (!array_key_exists('plugins', $raw)) {
+        if (!\array_key_exists('plugins', $raw)) {
             return 'composer';
         }
 
         $value = $raw['plugins'];
 
-        if (is_string($value)) {
+        if (\is_string($value)) {
             $normalized = strtolower(trim($value));
             if ($normalized === 'all' || $normalized === 'composer') {
                 return $normalized;
@@ -225,10 +223,10 @@ final class Config
             return [];
         }
 
-        if (is_array($value)) {
+        if (\is_array($value)) {
             $slugs = [];
             foreach ($value as $entry) {
-                if (!is_string($entry)) {
+                if (!\is_string($entry)) {
                     continue;
                 }
                 $slug = self::parseSlug($entry, $io);
@@ -271,13 +269,13 @@ final class Config
      */
     private static function parsePriority(array $raw, IOInterface $io): array
     {
-        if (!array_key_exists('priority', $raw)) {
+        if (!\array_key_exists('priority', $raw)) {
             return [];
         }
 
         $value = $raw['priority'];
 
-        if (!is_array($value)) {
+        if (!\is_array($value)) {
             self::warn(
                 $io,
                 '"priority" must be an array of plugin slugs; ignoring it'
@@ -288,7 +286,7 @@ final class Config
 
         $slugs = [];
         foreach ($value as $entry) {
-            if (!is_string($entry)) {
+            if (!\is_string($entry)) {
                 continue;
             }
             $slug = self::parseSlug($entry, $io, 'priority');
@@ -305,13 +303,13 @@ final class Config
      */
     private static function parseBool(array $raw, string $key, bool $default, IOInterface $io): bool
     {
-        if (!array_key_exists($key, $raw)) {
+        if (!\array_key_exists($key, $raw)) {
             return $default;
         }
 
         $value = $raw[$key];
-        if (!is_bool($value)) {
-            self::warn($io, sprintf(
+        if (!\is_bool($value)) {
+            self::warn($io, \sprintf(
                 '"%s" must be a boolean, using default (%s)',
                 $key,
                 $default ? 'true' : 'false'
@@ -334,7 +332,7 @@ final class Config
      */
     private static function parseAllowRoot(array $raw, IOInterface $io): string
     {
-        if (!array_key_exists('allow-root', $raw)) {
+        if (!\array_key_exists('allow-root', $raw)) {
             return self::ALLOW_ROOT_AUTO;
         }
 
@@ -386,7 +384,7 @@ final class Config
         }
 
         if (!self::isValidSlug($candidate)) {
-            self::warn($io, sprintf(
+            self::warn($io, \sprintf(
                 '"%s" entry "%s" is not a valid plugin slug, skipping',
                 $fieldLabel,
                 $value
@@ -396,7 +394,7 @@ final class Config
         }
 
         if ($wasStripped) {
-            self::warn($io, sprintf(
+            self::warn($io, \sprintf(
                 '"%s" entry "%s" looks like a Composer package name; using "%s" as the slug '
                 . '— write the WP plugin slug directly to avoid this warning',
                 $fieldLabel,

@@ -14,8 +14,7 @@ final class ComposerPluginResolver
     public function __construct(
         private readonly Composer $composer,
         private readonly IOInterface $io,
-    ) {
-    }
+    ) {}
 
     /**
      * Derive WP plugin slugs from Composer-managed packages of type
@@ -48,7 +47,7 @@ final class ComposerPluginResolver
 
             $slug = basename($path);
             if (!Config::isValidSlug($slug)) {
-                $this->io->writeError(sprintf(
+                $this->io->writeError(\sprintf(
                     '<warning>composer-wp-plugin-activator: Composer package "%s" '
                     . 'resolved to install-path basename "%s", which is not a valid '
                     . 'plugin slug; skipping</warning>',

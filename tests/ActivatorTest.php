@@ -31,7 +31,7 @@ final class ActivatorTest extends TestCase
      */
     private function resolver(array $slugs = []): callable
     {
-        return static fn (): array => $slugs;
+        return static fn(): array => $slugs;
     }
 
     public function testSkipsWhenBinaryMissing(): void

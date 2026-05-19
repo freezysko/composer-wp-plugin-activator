@@ -23,8 +23,7 @@ final class PluginRunner
     public function __construct(
         private readonly Composer $composer,
         private readonly IOInterface $io,
-    ) {
-    }
+    ) {}
 
     public function run(): void
     {
@@ -37,7 +36,7 @@ final class PluginRunner
         $activator = new Activator($config, $wpCli, $this->io);
         $resolver = new ComposerPluginResolver($this->composer, $this->io);
 
-        $exitCode = $activator->run(static fn (): array => $resolver->resolve());
+        $exitCode = $activator->run(static fn(): array => $resolver->resolve());
 
         self::enforceFailureOnError($exitCode, $config->shouldFailOnError());
     }
@@ -51,7 +50,7 @@ final class PluginRunner
     public static function enforceFailureOnError(int $exitCode, bool $failOnError): void
     {
         if ($exitCode !== 0 && $failOnError) {
-            throw new RuntimeException(sprintf(
+            throw new RuntimeException(\sprintf(
                 'composer-wp-plugin-activator: wp-cli plugin activation failed with exit code %d',
                 $exitCode
             ));
