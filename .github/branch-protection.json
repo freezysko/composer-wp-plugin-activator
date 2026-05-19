@@ -25,7 +25,8 @@
       "Analyze (actions)",
       "Lint Commit Messages",
       "dependency-review",
-      "semgrep"
+      "semgrep",
+      "quality"
     ]
   },
   "enforce_admins": false,
