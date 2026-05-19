@@ -76,7 +76,7 @@
     "cs-check": "php-cs-fixer fix --dry-run --diff",
     "cs-fix": "php-cs-fixer fix",
     "phpmd": "php -d error_reporting=0 vendor/bin/phpmd src,tests text phpmd.xml.dist",
-    "composer-unused": "composer-unused",
+    "composer-unused": "php -d error_reporting=0 vendor/bin/composer-unused",
     "composer-require-checker": "composer-require-checker check --config-file=composer-require-checker.json composer.json",
     "quality": [
       "@cs-check",
