@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<ruleset name="composer-wp-plugin-activator-cyclomatic"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <description>
+        Cyclomatic complexity enforcement only.
+        Style is handled by php-cs-fixer; types by PHPStan; cognitive complexity by a PHPStan extension.
+        PHPMD's other rulesets (cleancode, design, naming, unusedcode) are intentionally disabled to avoid overlap.
+    </description>
+
+    <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
+        <properties>
+            <property name="reportLevel" value="10"/>
+        </properties>
+    </rule>
+</ruleset>

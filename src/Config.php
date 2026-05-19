@@ -224,28 +224,7 @@ final class Config
         }
 
         if (\is_array($value)) {
-            $slugs = [];
-            foreach ($value as $entry) {
-                if (!\is_string($entry)) {
-                    continue;
-                }
-                $slug = self::parseSlug($entry, $io);
-                if ($slug !== null) {
-                    $slugs[] = $slug;
-                }
-            }
-
-            if ($slugs === []) {
-                self::warn(
-                    $io,
-                    '"plugins" array contained no valid slugs; skipping activation '
-                    . '— fix the entries to opt in'
-                );
-
-                return [];
-            }
-
-            return $slugs;
+            return self::parsePluginsArray($value, $io);
         }
 
         self::warn(
@@ -255,6 +234,40 @@ final class Config
         );
 
         return [];
+    }
+
+    /**
+     * Parse the array branch of "plugins": iterate string entries through
+     * `parseSlug`, drop non-strings, warn-and-fail-closed on empty result.
+     *
+     * @param array<mixed> $value
+     *
+     * @return list<string>
+     */
+    private static function parsePluginsArray(array $value, IOInterface $io): array
+    {
+        $slugs = [];
+        foreach ($value as $entry) {
+            if (!\is_string($entry)) {
+                continue;
+            }
+            $slug = self::parseSlug($entry, $io);
+            if ($slug !== null) {
+                $slugs[] = $slug;
+            }
+        }
+
+        if ($slugs === []) {
+            self::warn(
+                $io,
+                '"plugins" array contained no valid slugs; skipping activation '
+                . '— fix the entries to opt in'
+            );
+
+            return [];
+        }
+
+        return $slugs;
     }
 
     /**
