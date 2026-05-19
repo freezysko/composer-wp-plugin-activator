@@ -200,6 +200,30 @@ If your CI or Docker build runs Composer as root, leave `allow-root` at
 - **No auto-deactivation** — removing a plugin from `composer.json` removes it
   from disk; WordPress handles activation-state cleanup on the next request.
 
+### Out-of-scope risks (v1.0.x)
+
+These are documented but **not** actively scanned or mitigated in v1.0.x. Reports
+welcome via private security advisory; we will re-evaluate severity for v1.1.
+
+- **TOCTOU on the `wp` binary.** The binary check (`wp --version`) and the
+  invocation happen in separate process spawns. If the binary is replaced
+  between the two, the second invocation runs the replacement. Mitigation
+  belongs to the consumer (don't make `wp` writable by less-trusted users).
+- **Locale-spoofed WP-CLI output.** The "activated N plugin(s)" summary is
+  parsed from English WP-CLI output. Under a non-English WP-CLI locale, the
+  summary may be misreported. Activation itself is unaffected.
+- **DoS via unreturned WP-CLI.** If the `wp` invocation hangs, the Composer
+  install hangs. There is no client-side timeout. Mitigation: consumer-side
+  process supervision.
+- **Secrets in `--verbose` Composer logs.** If the consumer runs Composer with
+  `--verbose` or `composer install -vvv`, WP-CLI's stdout (which may include
+  database credentials or API keys from custom plugin output) appears in the
+  log. Don't enable verbose mode in CI logs you don't control.
+- **Local filesystem write access.** An attacker who can edit your
+  `composer.json` has already compromised the host. We validate every value
+  parsed from `extra.composer-wp-plugin-activator.*` as a defense-in-depth
+  measure, not a primary boundary.
+
 ## Comparison to alternatives
 
 | Tool | What it does | Why this is different |
