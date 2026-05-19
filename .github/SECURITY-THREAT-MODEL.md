@@ -25,8 +25,8 @@ mitigated.
 
 | Vector | Mitigation | Acceptance |
 |--------|-----------|-----------|
-| Argument splicing through a shell-interpreted command line (e.g. `proc_open("wp plugin activate ${slug}", …)`) | Each command part (binary, arg, `--path=` value) is wrapped via `ProcessExecutor::escape()` (POSIX single-quote escaping: `'…'`, with embedded `'` rendered as `'\''`) before `WpCli::buildCommand()` joins them with `implode(' ', …)`. The joined string is then handed to `ProcessExecutor::execute()`, which routes through Symfony `Process::fromShellCommandline()` and **does** spawn `/bin/sh -c`. The defence is therefore not "no shell" but "every byte the consumer can influence is single-quote-quoted", so shell metacharacters are interpreted literally, not as syntax. | `WpCli::run` audit entry in `docs/security/audit-initial.md` walks the `escape()` → `implode` → `fromShellCommandline` chain. |
-| Re-injection of already-validated slugs after string concatenation into a command line | Slugs and flags are still concatenated into a single command string, but every token passes through `ProcessExecutor::escape()` first. The validator layer (`Config::parseSlug` / `isValidSlug`) is the primary defence; the single-quote wrap is defence-in-depth for anything that escaped it. | Same audit entry; `tests/WpCliTest` covers a payload-bearing slug being passed and observed as a single literal argv token. |
+| Argument splicing through a shell-interpreted command line (e.g. `proc_open("wp plugin activate ${slug}", …)`) | Every dynamic / consumer-influenced token (binary path, slug, `--path=` value) is wrapped via `ProcessExecutor::escape()` (POSIX single-quote escaping: `'…'`, with embedded `'` rendered as `'\''`) before `WpCli::buildCommand()` joins them with `implode(' ', …)`. Hard-coded literals such as `--allow-root` are appended raw — they carry no consumer input. The joined string is then handed to `ProcessExecutor::execute()`, which routes through Symfony `Process::fromShellCommandline()` and **does** spawn `/bin/sh -c`. The defence is therefore not "no shell" but "every byte the consumer can influence is single-quote-quoted", so shell metacharacters in those tokens are interpreted literally, not as syntax. | `WpCli::run` audit entry in `docs/security/audit-initial.md` walks the `escape()` → `implode` → `fromShellCommandline` chain. |
+| Re-injection of already-validated slugs after string concatenation into a command line | Slugs and flags are still concatenated into a single command string, but every dynamic token passes through `ProcessExecutor::escape()` first. The validator layer (`Config::parseSlug` / `isValidSlug`) is the primary defence; the single-quote wrap is defence-in-depth for anything that escaped it. | Same audit entry; `tests/WpCliTest` covers a payload-bearing slug being passed and observed as a single literal argv token. |
 
 ### Medium: Root escalation surprises
 
@@ -45,10 +45,13 @@ mitigated.
 
 ## Out-of-scope (known limitations)
 
-The classes below are **not** actively mitigated in v1.0.x. They are
-documented for transparency in `README.md` → "Out-of-scope risks (v1.0.x)".
-Reports remain welcome via private security advisory; we may pull a class
-back into scope in a later major if evidence warrants it.
+The classes below are **not** actively mitigated in v1.0.x. The first five
+are also surfaced in `README.md` → "Out-of-scope risks (v1.0.x)"; the
+last two (null bytes via `ProcessExecutor::escape()`, `posix_getuid()`
+on Windows) are catalogued here only — they are implementation-detail
+caveats that do not change the public-facing API contract. Reports
+remain welcome via private security advisory; we may pull a class back
+into scope in a later major if evidence warrants it.
 
 - **TOCTOU on the `wp` binary** — the version check (`wp --version`) and the
   activation invocation happen in separate process spawns. A binary replaced
@@ -72,13 +75,15 @@ back into scope in a later major if evidence warrants it.
   the consumer's `composer.json` has already compromised the host. The
   config-validation regexes are defence-in-depth, not a primary boundary.
 - **Null bytes via `ProcessExecutor::escape()`** — Composer's `escape()` wraps
-  its input in POSIX single quotes; PHP's `proc_open` and Symfony's Process
-  layer terminate C strings at the first NUL byte, so a `\0` in a downstream
-  value would truncate the argv token. This matches `escapeshellarg`'s own
-  behaviour and is a property of the runtime, not a defect of this package.
-  The `wp-cli` and `wp-path` regex already rejects NUL at parse time, so the
-  practical risk is low; we treat it as a known limitation rather than a fix
-  target.
+  its input in POSIX single quotes and preserves any embedded NUL byte
+  verbatim (unlike PHP 8's `escapeshellarg`, which throws `ValueError` on
+  NUL). When the resulting command string is then handed to PHP's `proc_open`
+  / Symfony's Process layer, the underlying `execve`-style call terminates
+  C strings at the first NUL, so a `\0` would truncate or malform the
+  command before the binary runs. This is a property of the runtime, not a
+  defect of this package, and the `wp-cli` and `wp-path` regex already
+  rejects NUL at parse time. The practical risk is therefore low; we treat
+  it as a known limitation rather than a fix target.
 - **`posix_getuid()` absent on some Windows environments** — `allow-root:
   "auto"` relies on `posix_getuid()` to detect that the current process is
   running as uid 0. On Windows PHP builds where the `posix` extension is
