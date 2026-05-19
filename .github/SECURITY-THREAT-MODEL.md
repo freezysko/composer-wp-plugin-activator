@@ -1,0 +1,86 @@
+# Threat model — composer-wp-plugin-activator
+
+## Scope
+
+This document lists attack classes considered for v1.0.x, their mitigation in
+this package, and an explicit acceptance state. Out-of-scope classes are
+listed at the end with rationale.
+
+Severity floor for v1.0.x: **Critical + Medium** (per the project hardening
+roadmap § 4.4). Low/informational findings are accepted but not actively
+mitigated.
+
+## In-scope classes
+
+### Critical: Shell injection via consumer-supplied config
+
+| Vector | Mitigation | Acceptance |
+|--------|-----------|-----------|
+| `extra.composer-wp-plugin-activator.wp-cli` contains shell metachars (`;`, `\|`, `` ` ``, `$()`, newline, null byte) | Regex allowlist `^[A-Za-z0-9_./-]+$` in `Config::parseWpCli()`. Reject + warning, fall back to the default `wp` binary. | Test `ConfigTest::testWpCliRejectsShellMetacharacters` (data-provider over the payload set) passes. |
+| `extra.composer-wp-plugin-activator.wp-path` contains shell metachars or leading `-` (option-spoof into WP-CLI) | Same regex in `Config::parseWpPath()` plus an explicit leading-`-` rejection that emits a warning. Invalid values are dropped (path stays `null`). | Tests `ConfigTest::testWpPathRejectsShellMetacharacters` and `ConfigTest::testWpPathRejectsOptionSpoofing` pass. |
+| Plugin slugs supplied via `plugins` / `priority` arrays contain shell metachars | Existing `Config::isValidSlug()` rejects anything that is not `[A-Za-z0-9._-]`. Invalid entries are skipped with a warning; the rest still activate. | Existing slug tests + new injection-payload data-provider over `plugins`/`priority` entries. |
+| Composer package name (`vendor/slug`) bypasses slug check after normalisation | `Config::parseSlug()` normalises `vendor/slug` to its basename and re-runs `isValidSlug()` on the result before accepting it. | Test `ConfigTest::testComposerStyleNamesNormalisedAndValidated` passes. |
+
+### Critical: Shell injection at the WP-CLI invocation
+
+| Vector | Mitigation | Acceptance |
+|--------|-----------|-----------|
+| Argument splicing through a shell-interpreted `proc_open` call (e.g. `proc_open("wp plugin activate ${slug}", …)`) | `WpCli` uses the **array form** of `proc_open` — no shell is spawned and each argument reaches `wp` as a distinct `argv` entry. | `WpCli::run` audit entry in `docs/security/audit-initial.md` confirms the array call and the absence of `/bin/sh`. |
+| Re-injection of already-validated slugs after string concatenation into a command line | All slugs and flags are passed as separate `argv` entries; no command-line string is ever built. | Same audit entry; `tests/WpCliTest` covers a payload-bearing slug being passed without shell interpolation. |
+
+### Medium: Root escalation surprises
+
+| Vector | Mitigation | Acceptance |
+|--------|-----------|-----------|
+| `allow-root: true` silently grants `wp --allow-root` even when Composer is **not** running as root | The default is `allow-root: "auto"`, which only appends `--allow-root` when the current process is **actually** running as root (uid 0). Opt-in to unconditional root is therefore explicit. | README "Configuration" section documents the matrix; `Config::parseAllowRoot()` accepts only `true`, `false`, or `"auto"` and falls back to `"auto"` for everything else. |
+| Composer install run as root → `allow-root: "auto"` triggers `--allow-root` | This is the **expected** behaviour for the Composer-in-Docker pattern and is documented. No additional mitigation. | README note + audit-doc disposition. |
+
+### Medium: Supply chain compromise
+
+| Vector | Mitigation | Acceptance |
+|--------|-----------|-----------|
+| A dev-dependency is published with a known CVE | `roave/security-advisories:dev-latest` lives in `require-dev`. Its `conflict` entries cause `composer install` / `composer update` to fail at **resolve time** when a known-vulnerable version would otherwise be selected. | `composer.json` lists the package; CI's install step fails closed when a conflict matches. |
+| An already-installed dep becomes CVE-tagged after the lockfile is written | Weekly `.github/workflows/audit.yml` cron runs `composer audit --no-interaction`. A failure turns the run red and triggers GitHub's default workflow-failure notifications. | Workflow runs on `30 7 * * 1` UTC; visible in the Actions tab. |
+| Third-party GitHub Action is compromised (tag pin re-pointed to a malicious commit) | Three high-traffic third-party actions are pinned to immutable SHAs: `shivammathur/setup-php`, `ramsey/composer-install`, `wagoid/commitlint-github-action`. The `semgrep/semgrep` container image is pinned to a specific release tag. Dependabot's `github-actions` ecosystem opens PRs to bump these SHAs when upstream cuts a new release. | `.github/workflows/*.yml` diff after sub-project C-5 lands. |
+
+## Out-of-scope (known limitations)
+
+The classes below are **not** actively mitigated in v1.0.x. They are
+documented for transparency in `README.md` → "Out-of-scope risks (v1.0.x)".
+Reports remain welcome via private security advisory; we may pull a class
+back into scope in a later major if evidence warrants it.
+
+- **TOCTOU on the `wp` binary** — the version check (`wp --version`) and the
+  activation invocation happen in separate process spawns. A binary replaced
+  between the two would be executed. The mitigation belongs to the consumer
+  (don't make `wp` writable by less-trusted users); the practical attack
+  surface is bounded by local-filesystem write access, which is itself
+  out-of-scope (see below).
+- **Locale-spoofed WP-CLI output** — the "activated N plugin(s)" summary is
+  parsed from English WP-CLI output. Under a non-English WP-CLI locale the
+  summary may be misreported. Activation itself is unaffected; this is a
+  reporting-fidelity issue, not a security boundary.
+- **DoS via WP-CLI never returning** — there is no client-side timeout in
+  v1.0.x. A hung `wp` invocation will hang the Composer install. Mitigation
+  is consumer-side process supervision; we accept this risk over inventing a
+  timeout policy that would surprise long-running activations.
+- **Secrets leaked into Composer `--verbose` logs** — when the consumer runs
+  Composer with `--verbose` / `-vvv`, WP-CLI's stdout (which may include
+  database credentials or API keys emitted by custom plugins) appears in the
+  log. The verbosity is consumer-controlled; we do not redact.
+- **Local-filesystem write access prerequisite** — an attacker who can edit
+  the consumer's `composer.json` has already compromised the host. The
+  config-validation regexes are defence-in-depth, not a primary boundary.
+
+## Disclosure
+
+See [`SECURITY.md`](../SECURITY.md) for the report channel (private GitHub
+Security Advisories, with email fallback).
+
+**SLA:**
+
+- Triage: within **7 days** of report.
+- Fix target — **Critical**: within **30 days**.
+- Fix target — **Medium**: within **90 days**.
+
+No bug bounty.
