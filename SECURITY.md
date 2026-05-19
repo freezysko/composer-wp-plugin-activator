@@ -16,6 +16,14 @@ If GitHub is unavailable to you, email `marek.viger@gmail.com`. Encrypt with
 the maintainer's SSH/PGP signing key if you have it; otherwise plain email is
 acceptable.
 
+## Threat model
+
+See [`.github/SECURITY-THREAT-MODEL.md`](.github/SECURITY-THREAT-MODEL.md) for
+the explicit list of in-scope and out-of-scope attack classes for v1.0.x.
+
+Out-of-scope risks are summarised in
+[README → Known limitations](./README.md#out-of-scope-risks-v10x).
+
 ## Triage and disclosure
 
 - Triage: within 7 days of report.
@@ -24,6 +32,3 @@ acceptable.
   - Medium: within 90 days.
 - Coordinated disclosure: requesters and maintainer agree on a public-release
   date when a patched release ships.
-
-A more detailed threat model and out-of-scope list lands with sub-project C of
-the v1.0.0 hardening cycle.
