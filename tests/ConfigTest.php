@@ -504,6 +504,18 @@ final class ConfigTest extends TestCase
         self::assertNull($config->getWpPath());
     }
 
+    public function testWpCliRejectsLeadingDashOptionSpoofing(): void
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())
+            ->method('writeError')
+            ->with(self::stringContains('wp-cli'));
+
+        $config = Config::fromExtra([Config::EXTRA_KEY => ['wp-cli' => '-version']], $io);
+
+        self::assertSame('wp', $config->getWpCli());
+    }
+
     /**
      * @dataProvider shellMetaPayloadsProvider
      */

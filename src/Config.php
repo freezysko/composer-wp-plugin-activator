@@ -132,6 +132,15 @@ final class Config
         }
 
         $trimmed = trim($value);
+        if (str_starts_with($trimmed, '-')) {
+            self::warn(
+                $io,
+                '"wp-cli" must not start with "-" (would be interpreted as an option flag); using default ("wp")'
+            );
+
+            return 'wp';
+        }
+
         if (preg_match(self::VALID_PATH_REGEX, $trimmed) !== 1) {
             self::warn($io, sprintf(
                 '"wp-cli" value %s contains disallowed characters; using default ("wp"). '
