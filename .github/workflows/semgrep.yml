@@ -29,11 +29,14 @@ jobs:
 
       - name: Scan
         run: |
+          # --config auto resolves rule packs against Semgrep's registry based
+          # on detected languages and is the recommended OSS default. Earlier
+          # iteration of this workflow passed explicit `--config p/X` packs
+          # (php-security-audit / github-actions / owasp-top-ten / php) but the
+          # container exits with code 7 / loads 0 rules — `--config auto` is
+          # the path Semgrep's own docs route to in their CE workflow example.
           semgrep scan \
-            --config p/php-security-audit \
-            --config p/github-actions \
-            --config p/owasp-top-ten \
-            --config p/php \
+            --config auto \
             --error \
             --sarif --output semgrep.sarif \
             src/ tests/ .github/workflows/
