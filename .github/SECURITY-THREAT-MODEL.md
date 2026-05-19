@@ -16,7 +16,7 @@ mitigated.
 
 | Vector | Mitigation | Acceptance |
 |--------|-----------|-----------|
-| `extra.composer-wp-plugin-activator.wp-cli` contains shell metachars (`;`, `\|`, `` ` ``, `$()`, newline, null byte) | Regex allowlist `^[A-Za-z0-9_./-]+$` in `Config::parseWpCli()`. Reject + warning, fall back to the default `wp` binary. | Test `ConfigTest::testWpCliRejectsShellMetacharacters` (data-provider over the payload set) passes. |
+| `extra.composer-wp-plugin-activator.wp-cli` contains shell metachars (`;`, `\|`, `` ` ``, `$()`, newline, null byte) | Regex allowlist `^[A-Za-z0-9_./-]+$` in `Config::parseWpCli()`. Reject + warning, skip activation (the injected binary path is never reached). | Test `ConfigTest::testWpCliRejectsShellMetacharacters` (data-provider over the payload set) passes. |
 | `extra.composer-wp-plugin-activator.wp-path` contains shell metachars or leading `-` (option-spoof into WP-CLI) | Same regex in `Config::parseWpPath()` plus an explicit leading-`-` rejection that emits a warning. Invalid values are dropped (path stays `null`). | Tests `ConfigTest::testWpPathRejectsShellMetacharacters` and `ConfigTest::testWpPathRejectsOptionSpoofing` pass. |
 | Plugin slugs supplied via `plugins` / `priority` arrays contain shell metachars | Existing `Config::isValidSlug()` rejects anything that is not `[A-Za-z0-9._-]`. Invalid entries are skipped with a warning; the rest still activate. | Existing slug tests + new injection-payload data-provider over `plugins`/`priority` entries. |
 | Composer package name (`vendor/slug`) bypasses slug check after normalisation | `Config::parseSlug()` normalises `vendor/slug` to its basename and re-runs `isValidSlug()` on the result before accepting it. | Test `ConfigTest::testComposerStyleNamesNormalisedAndValidated` passes. |
@@ -32,7 +32,7 @@ mitigated.
 
 | Vector | Mitigation | Acceptance |
 |--------|-----------|-----------|
-| `allow-root: true` silently grants `wp --allow-root` even when Composer is **not** running as root | The default is `allow-root: "auto"`, which only appends `--allow-root` when the current process is **actually** running as root (uid 0). Opt-in to unconditional root is therefore explicit. | README "Configuration" section documents the matrix; `Config::parseAllowRoot()` accepts only `true`, `false`, or `"auto"` and falls back to `"auto"` for everything else. |
+| `allow-root: true` unconditionally appends `wp --allow-root`, silently permitting WP-CLI execution as root whenever the Composer process itself runs as root | The default is `allow-root: "auto"`, which only appends `--allow-root` when the current process is **actually** running as root (uid 0). Opt-in to unconditional root is therefore explicit. | README "Configuration" section documents the matrix; `Config::parseAllowRoot()` accepts only `true`, `false`, or `"auto"` and falls back to `"auto"` for everything else. |
 | Composer install run as root → `allow-root: "auto"` triggers `--allow-root` | This is the **expected** behaviour for the Composer-in-Docker pattern and is documented. No additional mitigation. | README note + audit-doc disposition. |
 
 ### Medium: Supply chain compromise
