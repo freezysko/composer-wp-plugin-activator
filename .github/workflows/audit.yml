@@ -1,0 +1,33 @@
+name: composer audit
+
+on:
+  schedule:
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v4
+
+      - name: Run composer audit
+        run: composer audit --no-interaction --format=plain
