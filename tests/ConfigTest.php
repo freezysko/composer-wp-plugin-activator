@@ -164,10 +164,6 @@ final class ConfigTest extends TestCase
 
     public function testWarningMessagesAreWrappedInTheWarningTagAndPrefix(): void
     {
-        // Config::warn() wraps every message as
-        // `<warning>composer-wp-plugin-activator: <msg></warning>`.
-        // Asserting the exact prefix AND suffix kills the Concat /
-        // ConcatOperandRemoval mutants on that wrapper.
         $writes = [];
         $io = $this->capturingIo($writes);
 
@@ -182,8 +178,6 @@ final class ConfigTest extends TestCase
 
     public function testInvalidWpCliWarningIsTheExactDisallowedCharsMessage(): void
     {
-        // Asserting the exact, fully-assembled warning kills Concat (operand
-        // reorder) as well as ConcatOperandRemoval on the message string.
         $writes = [];
         $config = Config::fromExtra(
             [Config::EXTRA_KEY => ['wp-cli' => 'bad;value']],
@@ -345,10 +339,8 @@ final class ConfigTest extends TestCase
 
     public function testInvalidBoolWarningNamesTheActualDefaultValue(): void
     {
-        // `verbose` defaults to false, `skip-when-wp-not-installed` to true.
-        // The warning interpolates the real default via `$default ? 'true'
-        // : 'false'`; asserting the exact word kills the Ternary mutant that
-        // swaps the two arms.
+        // verbose defaults to false, skip-when-wp-not-installed to true — the
+        // warning names the real default, so the exact word is asserted.
         $verboseWrites = [];
         Config::fromExtra(
             [Config::EXTRA_KEY => ['verbose' => 'not-a-bool']],
@@ -372,10 +364,6 @@ final class ConfigTest extends TestCase
 
     public function testWhitespaceOnlyWpCliIsRejectedAsEmptyNotAsDisallowedChars(): void
     {
-        // A whitespace-only value must be caught by the `trim($value) === ''`
-        // empty check, NOT fall through to the disallowed-characters branch.
-        // The UnwrapTrim mutant (`trim($value) === ''` → `$value === ''`)
-        // would route "   " to the wrong warning.
         $writes = [];
         $config = Config::fromExtra(
             [Config::EXTRA_KEY => ['wp-cli' => '   ']],
@@ -404,9 +392,6 @@ final class ConfigTest extends TestCase
 
     public function testPluginsArraySkipsNonStringEntriesAndKeepsLaterValidOnes(): void
     {
-        // A non-string entry ordered BEFORE a valid string slug: parsing must
-        // `continue` past the non-string and still collect the later slug.
-        // A `break` mutation would abandon the loop and drop "polylang".
         $config = $this->fromRaw(['plugins' => ['woocommerce', 42, 'polylang']]);
 
         self::assertSame(['woocommerce', 'polylang'], $config->getPlugins());
@@ -414,7 +399,6 @@ final class ConfigTest extends TestCase
 
     public function testPriorityArraySkipsNonStringEntriesAndKeepsLaterValidOnes(): void
     {
-        // Same ordering check for the `priority` array branch.
         $config = $this->fromRaw(['priority' => ['woocommerce', false, 'polylang']]);
 
         self::assertSame(['woocommerce', 'polylang'], $config->getPriority());

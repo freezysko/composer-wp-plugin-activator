@@ -31,9 +31,8 @@ final class PluginTest extends TestCase
 
     public function testOnPostInstallOrUpdateIsCallableFromOutsideTheClass(): void
     {
-        // The event handler must stay `public` — Composer's event dispatcher
-        // invokes it by name from outside the class. A `protected` mutation
-        // would make this very call a fatal error.
+        // The event handler must stay public — Composer's event dispatcher
+        // invokes it by name from outside the class.
         $io = $this->createMock(IOInterface::class);
         $plugin = new Plugin();
         $plugin->activate($this->composer([]), $io);
@@ -45,10 +44,6 @@ final class PluginTest extends TestCase
 
     public function testOnPostInstallOrUpdateActuallyRunsTheActivationChain(): void
     {
-        // Wire a real Composer whose extra drives a failing wp-cli with
-        // fail-on-error. If the handler genuinely delegates to PluginRunner,
-        // the activation failure surfaces as a thrown RuntimeException.
-        // The MethodCallRemoval mutant (empty body) would swallow it.
         $composer = $this->composer([
             'wp-cli' => __DIR__ . '/fixtures/wp-activate-fails',
             'skip-when-wp-not-installed' => false,

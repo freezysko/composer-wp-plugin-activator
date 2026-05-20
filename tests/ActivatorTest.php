@@ -41,9 +41,6 @@ final class ActivatorTest extends TestCase
         $wpCli->expects(self::never())->method('isWordPressInstalled');
         $wpCli->expects(self::never())->method('activateAll');
 
-        // Assert text from BOTH sides of the concatenated warning string so
-        // a Concat / ConcatOperandRemoval mutation that reorders or drops an
-        // operand is detected.
         $errorWrites = [];
         $io = $this->createMock(IOInterface::class);
         $io->method('writeError')->willReturnCallback(static function (string $message) use (&$errorWrites): void {
@@ -54,9 +51,6 @@ final class ActivatorTest extends TestCase
 
         self::assertSame(0, $activator->run($this->resolver()));
 
-        // Assert the exact, fully-assembled message. A Concat reorder of the
-        // two string operands would still contain both substrings but in the
-        // wrong order, so only an exact match kills the swap mutant.
         self::assertContains(
             '<warning>composer-wp-plugin-activator: wp-cli not found (tried "custom-wp"), '
             . 'skipping plugin activation</warning>',
@@ -72,9 +66,6 @@ final class ActivatorTest extends TestCase
         $wpCli->expects(self::never())->method('activateAll');
         $wpCli->expects(self::never())->method('activate');
 
-        // The "WordPress not installed" branch must emit an info line; assert
-        // both halves of its concatenated message so a MethodCallRemoval or
-        // Concat mutation on that write() is killed.
         $writes = [];
         $io = $this->createMock(IOInterface::class);
         $io->method('write')->willReturnCallback(static function (string $message) use (&$writes): void {
@@ -89,8 +80,6 @@ final class ActivatorTest extends TestCase
 
         self::assertSame(0, $activator->run($this->resolver()));
 
-        // Exact match kills the Concat-reorder mutant (both halves present
-        // but swapped) as well as ConcatOperandRemoval / MethodCallRemoval.
         self::assertContains(
             '<info>composer-wp-plugin-activator: WordPress not installed yet, '
             . 'skipping plugin activation</info>',
@@ -192,9 +181,6 @@ final class ActivatorTest extends TestCase
         $wpCli->method('isWordPressInstalled')->willReturn(true);
         $wpCli->method('activateAll')->willReturn(new WpCliResult(1, 'Error: something went wrong'));
 
-        // reportFailure() must surface the wp-cli output verbatim; asserting
-        // the output text was written kills the MethodCallRemoval mutant that
-        // drops the second writeError() call.
         $errorWrites = [];
         $io = $this->createMock(IOInterface::class);
         $io->method('writeError')->willReturnCallback(static function (string $message) use (&$errorWrites): void {
@@ -209,10 +195,9 @@ final class ActivatorTest extends TestCase
 
     public function testPriorityFailureExitCodeWinsOverDifferingMainFailureCode(): void
     {
-        // Main pass fails too (exit 2) and priority failed with exit 3.
-        // runMain only returns the priority code when `mainExitCode === 0`;
-        // here mainExitCode is 2, so the final code must be the MAIN code (2).
-        // The `&&` → `||` mutation would wrongly return the priority code (3).
+        // Both passes fail: priority exits 3, main exits 2. The final code is
+        // the main code — the priority code is only returned when the main
+        // pass itself succeeded.
         $wpCli = $this->createMock(WpCli::class);
         $wpCli->method('binaryExists')->willReturn(true);
         $wpCli->method('isWordPressInstalled')->willReturn(true);
@@ -235,10 +220,6 @@ final class ActivatorTest extends TestCase
 
     public function testPriorityFailureWithNegativeExitCodeStillPropagates(): void
     {
-        // The priority-failure guard is `$priorityFailureCode !== 0`. Pinning
-        // it against a negative exit code kills the DecrementInteger mutant
-        // (`!== 0` → `!== -1`): with code -1 the original still propagates the
-        // failure, the mutant would swallow it and return the main code (0).
         $wpCli = $this->createMock(WpCli::class);
         $wpCli->method('binaryExists')->willReturn(true);
         $wpCli->method('isWordPressInstalled')->willReturn(true);
@@ -261,10 +242,6 @@ final class ActivatorTest extends TestCase
 
     public function testVerbosePrintsPrioritySuccessOutputWhenMainPassIsEmpty(): void
     {
-        // composer mode with no resolved plugins → reportNoMain; the priority
-        // pass succeeds → reportSuccess is called with [$priorityResult->output].
-        // Verbose must then print that output. The ArrayItemRemoval mutant
-        // ([] instead of [output]) would skip the priority output entirely.
         $priorityOutput = "Plugin 'woocommerce' activated.";
 
         $wpCli = $this->createMock(WpCli::class);
@@ -282,7 +259,7 @@ final class ActivatorTest extends TestCase
             $writes[] = $message;
         });
 
-        // composer mode keeps `priority` (it is only dropped for explicit
+        // composer mode keeps `priority` (it is only dropped for an explicit
         // array `plugins`); the empty resolver makes the main pass a no-op.
         $activator = new Activator(
             $this->config(['plugins' => 'composer', 'priority' => ['woocommerce'], 'verbose' => true]),
