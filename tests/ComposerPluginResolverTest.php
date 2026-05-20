@@ -127,10 +127,71 @@ final class ComposerPluginResolverTest extends TestCase
             ['/var/www/web/app/plugins/woocommerce', '/var/www/web/app/plugins/-bad']
         );
 
+        // Assert text from BOTH halves of the concatenated warning so a
+        // Concat / ConcatOperandRemoval mutation on that message is killed.
+        $errorWrites = [];
         $io = $this->createMock(IOInterface::class);
-        $io->expects(self::atLeastOnce())
-            ->method('writeError')
-            ->with(self::stringContains('evil/dash-prefix'));
+        $io->method('writeError')->willReturnCallback(static function (string $message) use (&$errorWrites): void {
+            $errorWrites[] = $message;
+        });
+
+        $resolver = new ComposerPluginResolver($composer, $io);
+
+        self::assertSame(['woocommerce'], $resolver->resolve());
+
+        // Exact full message: a Concat reorder of the three string operands
+        // would keep every substring but scramble their order, so only an
+        // exact match kills the swap mutants.
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: Composer package "evil/dash-prefix" '
+            . 'resolved to install-path basename "-bad", which is not a valid '
+            . 'plugin slug; skipping</warning>',
+            $errorWrites
+        );
+    }
+
+    public function testNonPluginPackageBeforePluginPackageIsSkippedNotLoopBroken(): void
+    {
+        // A non-"wordpress-plugin" package ordered BEFORE a real plugin: the
+        // resolver must `continue` past it (and still reach the plugin). A
+        // `break` mutation would abandon the loop and return [].
+        $composer = $this->composer(
+            [$this->package('library'), $this->package('wordpress-plugin')],
+            ['/srv/vendor/some/lib', '/var/www/web/app/plugins/woocommerce']
+        );
+
+        $resolver = new ComposerPluginResolver($composer, $this->silentIo());
+
+        self::assertSame(['woocommerce'], $resolver->resolve());
+    }
+
+    public function testPackageWithoutInstallPathBeforePluginPackageIsSkippedNotLoopBroken(): void
+    {
+        // A wordpress-plugin with an unresolvable install path ordered BEFORE
+        // a resolvable one: the resolver must `continue` past the null-path
+        // entry and still pick up the later plugin. `break` would return [].
+        $composer = $this->composer(
+            [$this->package('wordpress-plugin'), $this->package('wordpress-plugin')],
+            [null, '/var/www/web/app/plugins/polylang']
+        );
+
+        $resolver = new ComposerPluginResolver($composer, $this->silentIo());
+
+        self::assertSame(['polylang'], $resolver->resolve());
+    }
+
+    public function testInvalidSlugPackageBeforeValidOneIsSkippedNotLoopBroken(): void
+    {
+        // A wordpress-plugin whose basename is an invalid slug ordered BEFORE
+        // a valid one: the resolver warns and `continue`s, still reaching the
+        // valid plugin. A `break` mutation would drop the trailing plugin.
+        $composer = $this->composer(
+            [$this->package('wordpress-plugin', 'evil/-bad'), $this->package('wordpress-plugin')],
+            ['/var/www/web/app/plugins/-bad', '/var/www/web/app/plugins/woocommerce']
+        );
+
+        $io = $this->createMock(IOInterface::class);
+        $io->expects(self::atLeastOnce())->method('writeError');
 
         $resolver = new ComposerPluginResolver($composer, $io);
 

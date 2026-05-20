@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Emits one token on stdout (no trailing newline) and one on stderr WITH a
+# trailing newline. WpCli::run() combines them as `trim(stdout . "\n" . stderr)`
+# so the exact result pins every part of that expression:
+#   - stdout precedes stderr;
+#   - they are joined by exactly one "\n" separator;
+#   - the surrounding `trim()` strips stderr's trailing newline.
+printf 'STDOUT-LINE'
+printf 'STDERR-LINE\n' >&2
+exit 0

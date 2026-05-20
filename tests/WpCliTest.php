@@ -135,4 +135,61 @@ final class WpCliTest extends TestCase
         self::assertStringContainsString('[plugin] [activate] [my plugin]', $result->output);
         self::assertStringNotContainsString('[my] [plugin]', $result->output);
     }
+
+    public function testBinaryExistsPassesExactlyTheVersionArgv(): void
+    {
+        // The strict fixture exits non-zero unless argv is exactly `--version`,
+        // so dropping that item (ArrayItemRemoval) flips the result to false.
+        $wpCli = $this->wpCli(['wp-cli' => self::FIXTURE_DIR . '/wp-strict-args']);
+
+        self::assertTrue($wpCli->binaryExists());
+    }
+
+    public function testBinaryExistsDoesNotAppendWpPathEvenWhenConfigured(): void
+    {
+        // binaryExists() calls run(..., includePath: false). The strict fixture
+        // fails if argv is anything but `--version`, so an appended `--path=`
+        // (FalseValue mutation flipping includePath to true) makes it fail.
+        $wpCli = $this->wpCli([
+            'wp-cli' => self::FIXTURE_DIR . '/wp-strict-args',
+            'wp-path' => '/srv/site/web/wp',
+        ]);
+
+        self::assertTrue($wpCli->binaryExists());
+    }
+
+    public function testIsWordPressInstalledPassesExactlyTheCoreIsInstalledArgv(): void
+    {
+        // The strict fixture only exits zero for the exact `core is-installed`
+        // pair, so dropping the `core` item (ArrayItemRemoval) breaks it.
+        $wpCli = $this->wpCli(['wp-cli' => self::FIXTURE_DIR . '/wp-strict-args']);
+
+        self::assertTrue($wpCli->isWordPressInstalled());
+    }
+
+    public function testRunJoinsStdoutAndStderrWithExactlyOneNewline(): void
+    {
+        // The fixture writes one token to stdout and one to stderr, each with
+        // no trailing newline. WpCli::run() must combine them as
+        // `trim(stdout . "\n" . stderr)`, so the exact result pins the join:
+        // stdout first, stderr second, separated by a single "\n". Any Concat
+        // reorder or ConcatOperandRemoval on that separator changes the string.
+        $wpCli = $this->wpCli(['wp-cli' => self::FIXTURE_DIR . '/wp-stdout-stderr']);
+
+        $result = $wpCli->activateAll();
+
+        self::assertSame("STDOUT-LINE\nSTDERR-LINE", $result->output);
+    }
+
+    public function testAllowRootIsOmittedUnderDefaultAutoModeOnNonRootEnvironment(): void
+    {
+        // The test runner is non-root, so `auto` mode must resolve to NOT
+        // appending --allow-root. This pins the `posix_getuid() === 0` arm:
+        // negating the comparison or the `&&` would append the flag here.
+        $wpCli = $this->wpCli(['wp-cli' => self::FIXTURE_DIR . '/wp']);
+
+        $result = $wpCli->activateAll();
+
+        self::assertStringNotContainsString('--allow-root', $result->output);
+    }
 }

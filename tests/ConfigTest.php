@@ -135,6 +135,21 @@ final class ConfigTest extends TestCase
         ];
     }
 
+    /**
+     * Capture every writeError() message into a list for full-text assertions.
+     *
+     * @param list<string> $sink
+     */
+    private function capturingIo(array &$sink): IOInterface
+    {
+        $io = $this->createMock(IOInterface::class);
+        $io->method('writeError')->willReturnCallback(static function (string $message) use (&$sink): void {
+            $sink[] = $message;
+        });
+
+        return $io;
+    }
+
     public function testInvalidWpCliWarnsAndFallsBackToDefault(): void
     {
         $io = $this->createMock(IOInterface::class);
@@ -145,6 +160,145 @@ final class ConfigTest extends TestCase
         $config = Config::fromExtra([Config::EXTRA_KEY => ['wp-cli' => 123]], $io);
 
         self::assertSame('wp', $config->getWpCli());
+    }
+
+    public function testWarningMessagesAreWrappedInTheWarningTagAndPrefix(): void
+    {
+        // Config::warn() wraps every message as
+        // `<warning>composer-wp-plugin-activator: <msg></warning>`.
+        // Asserting the exact prefix AND suffix kills the Concat /
+        // ConcatOperandRemoval mutants on that wrapper.
+        $writes = [];
+        $io = $this->capturingIo($writes);
+
+        Config::fromExtra([Config::EXTRA_KEY => ['wp-cli' => 123]], $io);
+
+        self::assertNotEmpty($writes);
+        foreach ($writes as $message) {
+            self::assertStringStartsWith('<warning>composer-wp-plugin-activator: ', $message);
+            self::assertStringEndsWith('</warning>', $message);
+        }
+    }
+
+    public function testInvalidWpCliWarningIsTheExactDisallowedCharsMessage(): void
+    {
+        // Asserting the exact, fully-assembled warning kills Concat (operand
+        // reorder) as well as ConcatOperandRemoval on the message string.
+        $writes = [];
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['wp-cli' => 'bad;value']],
+            $this->capturingIo($writes)
+        );
+
+        self::assertSame('wp', $config->getWpCli());
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"wp-cli" value \'bad;value\' contains disallowed characters; using default ("wp"). '
+            . 'Allowed: alphanumerics, "_", ".", "/", "-".</warning>',
+            $writes
+        );
+    }
+
+    public function testInvalidWpPathWarningIsTheExactDisallowedCharsMessage(): void
+    {
+        $writes = [];
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['wp-path' => 'bad;value']],
+            $this->capturingIo($writes)
+        );
+
+        self::assertNull($config->getWpPath());
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"wp-path" value \'bad;value\' contains disallowed characters; using default (null). '
+            . 'Allowed: alphanumerics, "_", ".", "/", "-".</warning>',
+            $writes
+        );
+    }
+
+    public function testInvalidPluginsStringWarningIsTheExactMessage(): void
+    {
+        $writes = [];
+        Config::fromExtra(
+            [Config::EXTRA_KEY => ['plugins' => 'everything']],
+            $this->capturingIo($writes)
+        );
+
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"plugins" string must be "all" or "composer"; skipping activation '
+            . '— set a valid value to opt in</warning>',
+            $writes
+        );
+    }
+
+    public function testInvalidPluginsTypeWarningIsTheExactMessage(): void
+    {
+        $writes = [];
+        Config::fromExtra(
+            [Config::EXTRA_KEY => ['plugins' => 42]],
+            $this->capturingIo($writes)
+        );
+
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"plugins" must be "all", "composer", or an array of slugs; '
+            . 'skipping activation — set a valid value to opt in</warning>',
+            $writes
+        );
+    }
+
+    public function testEmptyPluginsArrayWarningIsTheExactMessage(): void
+    {
+        $writes = [];
+        Config::fromExtra(
+            [Config::EXTRA_KEY => ['plugins' => ['', '  ']]],
+            $this->capturingIo($writes)
+        );
+
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"plugins" array contained no valid slugs; skipping activation '
+            . '— fix the entries to opt in</warning>',
+            $writes
+        );
+    }
+
+    public function testComposerPackageNameWarningIsTheExactMessage(): void
+    {
+        $writes = [];
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['plugins' => ['wpackagist-plugin/woocommerce']]],
+            $this->capturingIo($writes)
+        );
+
+        self::assertSame(['woocommerce'], $config->getPlugins());
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"plugins" entry "wpackagist-plugin/woocommerce" looks like a Composer package name; '
+            . 'using "woocommerce" as the slug '
+            . '— write the WP plugin slug directly to avoid this warning</warning>',
+            $writes
+        );
+    }
+
+    public function testPriorityIgnoredWarningIsTheExactMessage(): void
+    {
+        $writes = [];
+        Config::fromExtra(
+            [Config::EXTRA_KEY => [
+                'plugins' => ['woocommerce'],
+                'priority' => ['polylang'],
+            ]],
+            $this->capturingIo($writes)
+        );
+
+        self::assertContains(
+            '<warning>composer-wp-plugin-activator: '
+            . '"priority" is ignored when "plugins" is an explicit array '
+            . '— the array already controls activation order</warning>',
+            $writes
+        );
     }
 
     public function testInvalidPluginsWarnsAndFallsBackToEmptyList(): void
@@ -187,6 +341,83 @@ final class ConfigTest extends TestCase
         $config = Config::fromExtra([Config::EXTRA_KEY => ['verbose' => 'yes please']], $io);
 
         self::assertFalse($config->isVerbose());
+    }
+
+    public function testInvalidBoolWarningNamesTheActualDefaultValue(): void
+    {
+        // `verbose` defaults to false, `skip-when-wp-not-installed` to true.
+        // The warning interpolates the real default via `$default ? 'true'
+        // : 'false'`; asserting the exact word kills the Ternary mutant that
+        // swaps the two arms.
+        $verboseWrites = [];
+        Config::fromExtra(
+            [Config::EXTRA_KEY => ['verbose' => 'not-a-bool']],
+            $this->capturingIo($verboseWrites)
+        );
+        self::assertStringContainsString(
+            'using default (false)',
+            implode("\n", $verboseWrites)
+        );
+
+        $skipWrites = [];
+        Config::fromExtra(
+            [Config::EXTRA_KEY => ['skip-when-wp-not-installed' => 'not-a-bool']],
+            $this->capturingIo($skipWrites)
+        );
+        self::assertStringContainsString(
+            'using default (true)',
+            implode("\n", $skipWrites)
+        );
+    }
+
+    public function testWhitespaceOnlyWpCliIsRejectedAsEmptyNotAsDisallowedChars(): void
+    {
+        // A whitespace-only value must be caught by the `trim($value) === ''`
+        // empty check, NOT fall through to the disallowed-characters branch.
+        // The UnwrapTrim mutant (`trim($value) === ''` → `$value === ''`)
+        // would route "   " to the wrong warning.
+        $writes = [];
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['wp-cli' => '   ']],
+            $this->capturingIo($writes)
+        );
+
+        self::assertSame('wp', $config->getWpCli());
+        $joined = implode("\n", $writes);
+        self::assertStringContainsString('"wp-cli" must be a non-empty string', $joined);
+        self::assertStringNotContainsString('disallowed characters', $joined);
+    }
+
+    public function testWhitespaceOnlyWpPathIsRejectedAsEmptyNotAsDisallowedChars(): void
+    {
+        $writes = [];
+        $config = Config::fromExtra(
+            [Config::EXTRA_KEY => ['wp-path' => "  \t "]],
+            $this->capturingIo($writes)
+        );
+
+        self::assertNull($config->getWpPath());
+        $joined = implode("\n", $writes);
+        self::assertStringContainsString('"wp-path" must be a non-empty string or null', $joined);
+        self::assertStringNotContainsString('disallowed characters', $joined);
+    }
+
+    public function testPluginsArraySkipsNonStringEntriesAndKeepsLaterValidOnes(): void
+    {
+        // A non-string entry ordered BEFORE a valid string slug: parsing must
+        // `continue` past the non-string and still collect the later slug.
+        // A `break` mutation would abandon the loop and drop "polylang".
+        $config = $this->fromRaw(['plugins' => ['woocommerce', 42, 'polylang']]);
+
+        self::assertSame(['woocommerce', 'polylang'], $config->getPlugins());
+    }
+
+    public function testPriorityArraySkipsNonStringEntriesAndKeepsLaterValidOnes(): void
+    {
+        // Same ordering check for the `priority` array branch.
+        $config = $this->fromRaw(['priority' => ['woocommerce', false, 'polylang']]);
+
+        self::assertSame(['woocommerce', 'polylang'], $config->getPriority());
     }
 
     public function testInvalidAllowRootWarnsAndFallsBackToAuto(): void

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Strict-argv fake WP-CLI. Unlike `wp`, this fixture only succeeds when the
+# *exact* argv WpCli is expected to build is present — it pins the argument
+# lists in WpCli::binaryExists() / isWordPressInstalled() so a mutation that
+# drops an argv item (e.g. `['--version']` → `[]`) is detected.
+#
+# Echoes the bracketed argv (like `wp`) so callers can also assert on output.
+printf 'wp'
+for arg in "$@"; do printf ' [%s]' "$arg"; done
+printf '\n'
+
+case "$1" in
+    --version)
+        # binaryExists() must pass exactly `['--version']`.
+        [ "$#" -eq 1 ] && exit 0
+        exit 1
+        ;;
+    core)
+        # isWordPressInstalled() must pass exactly `['core', 'is-installed']`.
+        [ "$2" = "is-installed" ] && exit 0
+        exit 1
+        ;;
+    *)
+        exit 1
+        ;;
+esac
