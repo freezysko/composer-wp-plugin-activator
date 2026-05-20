@@ -26,7 +26,9 @@
       "Lint Commit Messages",
       "dependency-review",
       "semgrep",
-      "quality"
+      "quality",
+      "coverage",
+      "mutation"
     ]
   },
   "enforce_admins": false,

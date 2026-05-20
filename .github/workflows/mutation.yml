@@ -1,0 +1,37 @@
+name: Mutation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    name: mutation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # was v2.37.1 — current as of 2026-05-19
+        with:
+          php-version: "8.5"
+          tools: composer:v2, infection:0.29.6
+          coverage: xdebug
+          ini-values: memory_limit=1G
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # was 4.0.0 — current as of 2026-05-19
+
+      - name: Mutation testing
+        run: infection --threads=max --no-progress
