@@ -13,12 +13,18 @@ dependents activate cleanly.
 {
     "name": "acme/wp-shop",
     "type": "project",
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://repo.wp-packages.org"
+        }
+    ],
     "require": {
         "php": ">=8.1",
         "composer/installers": "^2.2",
-        "wpackagist-plugin/woocommerce": "^9.0",
-        "wpackagist-plugin/woocommerce-gateway-stripe": "^9.0",
-        "wpackagist-plugin/woocommerce-subscriptions": "^7.0",
+        "wp-plugin/woocommerce": "^10.0",
+        "wp-plugin/woocommerce-gateway-stripe": "^9.0",
+        "wp-plugin/woocommerce-paypal-payments": "^3.0",
         "freezysko/composer-wp-plugin-activator": "^1.0"
     },
     "config": {
@@ -41,8 +47,8 @@ dependents activate cleanly.
 
 ## Notes
 
-Here `woocommerce` activates before the main pass, so the Stripe gateway and
-subscriptions add-ons find it active when their turn comes. List multiple slugs
+Here `woocommerce` activates before the main pass, so the Stripe and PayPal
+gateway add-ons find it active when their turn comes. List multiple slugs
 in `priority` to control their order relative to each other. Note that
 `priority` is **ignored when `plugins` is an explicit array** — the array
 already controls activation order, and the activator emits a warning if both

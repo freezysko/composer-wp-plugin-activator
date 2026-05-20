@@ -2,7 +2,8 @@
 
 [Bedrock](https://roots.io/bedrock/) is a modern WordPress boilerplate that
 manages the whole site with Composer. WordPress plugins are installed as
-Composer packages and land in `web/app/plugins` (Bedrock's renamed
+Composer packages — via [WP Packages](https://wp-packages.org/) as
+`wp-plugin/*` packages — and land in `web/app/plugins` (Bedrock's renamed
 `wp-content/plugins`). Add `freezysko/composer-wp-plugin-activator` to `require`
 and it activates those Composer-installed plugins on every `composer install` /
 `composer update` — no extra configuration needed.
@@ -13,13 +14,19 @@ and it activates those Composer-installed plugins on every `composer install` /
 {
     "name": "acme/bedrock-site",
     "type": "project",
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://repo.wp-packages.org"
+        }
+    ],
     "require": {
         "php": ">=8.1",
         "composer/installers": "^2.2",
         "roots/bedrock-autoloader": "^1.0",
         "roots/wordpress": "^6.5",
         "vlucas/phpdotenv": "^5.6",
-        "wpackagist-plugin/woocommerce": "^9.0",
+        "wp-plugin/woocommerce": "^10.0",
         "freezysko/composer-wp-plugin-activator": "^1.0"
     },
     "config": {
