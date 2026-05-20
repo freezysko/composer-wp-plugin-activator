@@ -14,4 +14,5 @@
             <directory>src</directory>
         </include>
     </source>
+    <coverage pathCoverage="true"/>
 </phpunit>

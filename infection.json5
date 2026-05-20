@@ -1,0 +1,17 @@
+{
+    // No "$schema" key — Infection is not in vendor/ (it's a CI tool per B-d13),
+    // so a vendor-relative schema path would not resolve.
+    // logs.stryker omitted: spec § 5.1 shows the older-Infection shape, which the
+    // 0.33+ JSON schema rejects. The no-badge intent (B-d7) is preserved by omission.
+    "source": {
+        "directories": ["src"]
+    },
+    "mutators": {
+        "@default": true
+    },
+    "minMsi": 85,
+    "minCoveredMsi": 85,
+    "logs": {
+        "text": "php://stderr"
+    }
+}
