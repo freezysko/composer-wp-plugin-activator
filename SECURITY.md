@@ -22,7 +22,7 @@ See [`.github/SECURITY-THREAT-MODEL.md`](.github/SECURITY-THREAT-MODEL.md) for
 the explicit list of in-scope and out-of-scope attack classes for v1.0.x.
 
 Out-of-scope risks are summarised in
-[README → Known limitations](./README.md#out-of-scope-risks-v10x).
+[README → Limitations](./README.md#limitations).
 
 ## Triage and disclosure
 
