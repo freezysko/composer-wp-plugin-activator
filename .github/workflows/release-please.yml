@@ -1,10 +1,15 @@
-name: Release
+name: Release Please
 
 # Automated release pipeline.
 #
 # release-please runs in skip-github-release mode: it only opens / updates the
 # release PR (version bump + CHANGELOG). Merging that PR is the release.
 # A follow-up step then signs the tag and publishes the GitHub release.
+#
+# The pipeline is dormant until the v1.0.0 baseline tag exists: v1.0.0 is cut
+# manually (the final-gate tag); release-please manages v1.0.1 onward. The
+# baseline guard in the sign step enforces this — so the secrets below may be
+# provisioned at any time without risk of an early auto-release.
 #
 # Required repository secrets:
 #   RELEASE_SIGNING_KEY - an SSH private key (OpenSSH format) used to sign the
@@ -54,6 +59,15 @@ jobs:
           set -euo pipefail
           VERSION="$(jq -r '."."' .release-please-manifest.json)"
           TAG="v${VERSION}"
+
+          # Baseline guard: the automated pipeline is dormant until v1.0.0
+          # exists. v1.0.0 is cut manually (the final-gate tag); release-please
+          # manages v1.0.1 onward. This makes provisioning RELEASE_SIGNING_KEY
+          # early harmless — the step is inert until v1.0.0 is tagged.
+          if ! git ls-remote --tags --exit-code origin refs/tags/v1.0.0 >/dev/null 2>&1; then
+            echo "Baseline v1.0.0 not yet tagged — release automation inactive."
+            exit 0
+          fi
 
           # Act only when the manifest version is not yet tagged — i.e. a
           # release PR has just been merged. Ordinary pushes are a no-op.
