@@ -1,4 +1,4 @@
-# Composer WP Plugin Activator
+# Composer WordPress Plugin Activator
 
 [![CI](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/ci.yml/badge.svg)](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/codeql.yml/badge.svg)](https://github.com/freezysko/composer-wp-plugin-activator/actions/workflows/codeql.yml)
@@ -19,13 +19,6 @@ Require the package:
 ```bash
 composer require freezysko/composer-wp-plugin-activator
 ```
-
-Releases are published as signed git tags through an automated release
-pipeline and synced to Packagist on each tagged release. If a new release does
-not appear on Packagist, trigger a manual sync from the "Update" button on the
-[Packagist package page](https://packagist.org/packages/freezysko/composer-wp-plugin-activator)
-— the same update the API ping in [`.github/workflows/release.yml`](.github/workflows/release.yml)
-performs.
 
 Then allow the plugin to run. Composer 2.2+ blocks plugin code unless it is
 explicitly allowed — **without this entry the package installs but does
@@ -132,6 +125,12 @@ priority-pass failure does not stop the main pass, but it is surfaced as an
 error and preserved in the exit code, so `fail-on-error: true` still aborts
 Composer when a priority slug fails.
 
+## Bedrock integration
+
+Works zero-config in [Bedrock](https://roots.io/bedrock/) projects — WP-CLI
+auto-detects the WordPress path, so `wp-path` can stay `null`. See
+[`examples/bedrock.md`](examples/bedrock.md).
+
 ## Versioning
 
 This package follows [Semantic Versioning](https://semver.org/).
@@ -153,12 +152,6 @@ call its code.
 A deprecated config key or behavior is kept for at least one MINOR release,
 emitting a runtime warning, before removal in the next MAJOR. Deprecations and
 breaking changes are recorded in [`CHANGELOG.md`](CHANGELOG.md).
-
-## Bedrock integration
-
-Works zero-config in [Bedrock](https://roots.io/bedrock/) projects — WP-CLI
-auto-detects the WordPress path, so `wp-path` can stay `null`. See
-[`examples/bedrock.md`](examples/bedrock.md).
 
 ## Limitations
 
