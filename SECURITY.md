@@ -2,9 +2,8 @@
 
 ## Supported versions
 
-| Version | Status    |
-|---------|-----------|
-| 1.0.x   | Supported |
+The project has a single release line: the latest `1.0.x` release receives
+security fixes.
 
 ## Reporting a vulnerability
 
@@ -21,8 +20,8 @@ acceptable.
 See [`.github/SECURITY-THREAT-MODEL.md`](.github/SECURITY-THREAT-MODEL.md) for
 the explicit list of in-scope and out-of-scope attack classes for v1.0.x.
 
-Out-of-scope risks are summarised in
-[README → Limitations](./README.md#limitations).
+Out-of-scope risks are listed, with rationale, in the threat model's
+[Out-of-scope section](.github/SECURITY-THREAT-MODEL.md#out-of-scope-known-limitations).
 
 ## Triage and disclosure
 
