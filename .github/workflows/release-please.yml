@@ -1,0 +1,90 @@
+name: Release
+
+# Automated release pipeline.
+#
+# release-please runs in skip-github-release mode: it only opens / updates the
+# release PR (version bump + CHANGELOG). Merging that PR is the release.
+# A follow-up step then signs the tag and publishes the GitHub release.
+#
+# Required repository secrets:
+#   RELEASE_SIGNING_KEY - an SSH private key (OpenSSH format) used to sign the
+#                         release tag. Its PUBLIC key must be registered on the
+#                         tagging identity's GitHub account as a *signing* key
+#                         so GitHub shows the tag as Verified. Keep the private
+#                         key passphrase-less (CI cannot enter a passphrase).
+#   PACKAGIST_USERNAME  - Packagist username (already used by release.yml).
+#   PACKAGIST_TOKEN     - Packagist API token (already used by release.yml).
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manage release PR
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # was v5.0.0 — current as of 2026-05-21
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Sign tag and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -r '."."' .release-please-manifest.json)"
+          TAG="v${VERSION}"
+
+          # Act only when the manifest version is not yet tagged — i.e. a
+          # release PR has just been merged. Ordinary pushes are a no-op.
+          if git ls-remote --tags --exit-code origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists — nothing to release."
+            exit 0
+          fi
+
+          # Import the SSH signing key.
+          KEY_FILE="$(mktemp)"
+          printf '%s\n' "${RELEASE_SIGNING_KEY}" > "${KEY_FILE}"
+          chmod 600 "${KEY_FILE}"
+          git config user.name "release-bot"
+          git config user.email "noreply@github.com"
+          git config gpg.format ssh
+          git config user.signingkey "${KEY_FILE}"
+
+          # Create the signed tag at the merged release commit and push it.
+          git tag -s "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+
+          # Publish the GitHub release with the CHANGELOG section as notes.
+          NOTES="$(awk -v v="${VERSION}" '
+            $0 ~ "^## \\[" v "\\]" { f = 1; next }
+            f && /^## \[/ { exit }
+            f { print }
+          ' CHANGELOG.md)"
+          gh release create "${TAG}" --title "${TAG}" --notes "${NOTES}"
+
+          # A GITHUB_TOKEN-pushed tag does not trigger release.yml, so ping
+          # Packagist here directly.
+          curl -sf -XPOST -H'content-type:application/json' \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_TOKEN}" \
+            -d'{"repository":{"url":"https://packagist.org/packages/freezysko/composer-wp-plugin-activator"}}'
