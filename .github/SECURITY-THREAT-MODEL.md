@@ -46,7 +46,7 @@ mitigated.
 ## Out-of-scope (known limitations)
 
 The classes below are **not** actively mitigated in v1.0.x. The first five
-are also surfaced in `README.md` → "Out-of-scope risks (v1.0.x)"; the
+are also summarised in `README.md` → "Limitations"; the
 last two (null bytes via `ProcessExecutor::escape()`, `posix_getuid()`
 on Windows) are catalogued here only — they are implementation-detail
 caveats that do not change the public-facing API contract. Reports
