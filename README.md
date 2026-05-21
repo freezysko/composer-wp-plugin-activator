@@ -20,6 +20,13 @@ Require the package:
 composer require freezysko/composer-wp-plugin-activator
 ```
 
+Releases are published as signed git tags through an automated release
+pipeline and synced to Packagist on each tagged release. If a new release does
+not appear on Packagist, trigger a manual sync from the "Update" button on the
+[Packagist package page](https://packagist.org/packages/freezysko/composer-wp-plugin-activator)
+— the same update the API ping in [`.github/workflows/release.yml`](.github/workflows/release.yml)
+performs.
+
 Then allow the plugin to run. Composer 2.2+ blocks plugin code unless it is
 explicitly allowed — **without this entry the package installs but does
 nothing:**
@@ -124,6 +131,28 @@ already controls order; a warning is emitted so operators notice. A
 priority-pass failure does not stop the main pass, but it is surfaced as an
 error and preserved in the exit code, so `fail-on-error: true` still aborts
 Composer when a priority slug fails.
+
+## Versioning
+
+This package follows [Semantic Versioning](https://semver.org/).
+
+**Public contract.** The public API is the
+`extra.composer-wp-plugin-activator` configuration schema documented in
+[Configuration](#configuration) — the keys `wp-cli`, `wp-path`, `plugins`,
+`priority`, `skip-when-wp-not-installed`, `verbose`, `fail-on-error`,
+`allow-root` — and the documented activation behavior. The PHP classes are
+**not** part of the public API: consumers configure the plugin, they do not
+call its code.
+
+- **MAJOR** — a change that can break an existing consumer's `extra`
+  configuration or the documented behavior: a removed or renamed config key, a
+  changed default, or a changed activation outcome.
+- **MINOR** — new, backward-compatible configuration or behavior.
+- **PATCH** — bug fixes that do not change the documented contract.
+
+A deprecated config key or behavior is kept for at least one MINOR release,
+emitting a runtime warning, before removal in the next MAJOR. Deprecations and
+breaking changes are recorded in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Bedrock integration
 
